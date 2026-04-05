@@ -1,0 +1,13 @@
+.git
+__pycache__
+*.pyc
+venv/
+.env
+*.secret
+Dockerfile
+docker-compose.yml
+results/
+logs/
+data/
+docs/
+*.md

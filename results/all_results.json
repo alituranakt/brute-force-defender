@@ -1,0 +1,87 @@
+{
+  "attack_single_unsalted": {
+    "success": true,
+    "password": "123456",
+    "attempts": 1,
+    "time_seconds": 2e-06,
+    "hashes_per_second": 467290,
+    "method": "Dictionary Attack (Salt'sız)"
+  },
+  "attack_single_salted": {
+    "success": true,
+    "password": "123456",
+    "attempts": 1,
+    "time_seconds": 2e-06,
+    "hashes_per_second": 416667,
+    "method": "Dictionary Attack (Salt'lı)"
+  },
+  "attack_multi_unsalted": {
+    "total_users": 8,
+    "cracked_count": 8,
+    "cracked_users": {
+      "ali": "123456",
+      "ayse": "password",
+      "mehmet": "123456",
+      "zeynep": "qwerty",
+      "ahmet": "letmein",
+      "fatma": "password",
+      "mustafa": "abc123",
+      "elif": "admin"
+    },
+    "rainbow_build_time": 4e-05,
+    "total_lookup_time": 9e-06,
+    "total_time": 5e-05,
+    "method": "Rainbow Table (Çoklu Kullanıcı - Salt'sız)"
+  },
+  "attack_multi_salted": {
+    "total_users": 8,
+    "cracked_count": 8,
+    "cracked_users": {
+      "ali": "123456",
+      "ayse": "password",
+      "mehmet": "123456",
+      "zeynep": "qwerty",
+      "ahmet": "letmein",
+      "fatma": "password",
+      "mustafa": "abc123",
+      "elif": "admin"
+    },
+    "total_attempts": 40,
+    "total_time": 6e-05,
+    "method": "Dictionary Attack (Çoklu Kullanıcı - Salt'lı)"
+  },
+  "bruteforce_unsalted": {
+    "success": true,
+    "password": "ab1",
+    "attempts": 1396,
+    "total_possible": 47988,
+    "time_seconds": 0.001421,
+    "hashes_per_second": 982719,
+    "method": "Brute-Force (Salt'sız, max_len=3)"
+  },
+  "bruteforce_salted": {
+    "success": true,
+    "password": "ab1",
+    "attempts": 1396,
+    "total_possible": 47988,
+    "time_seconds": 0.001583,
+    "hashes_per_second": 882145,
+    "method": "Brute-Force (Salt'lı, max_len=3)"
+  },
+  "blake3_vs_sha256": {
+    "iterations": 100000,
+    "blake3": {
+      "unsalted_seconds": 0.0866,
+      "salted_seconds": 0.0933,
+      "unsalted_hps": 1154895,
+      "salted_hps": 1071512
+    },
+    "sha256": {
+      "unsalted_seconds": 0.0523,
+      "salted_seconds": 0.0567,
+      "unsalted_hps": 1913383,
+      "salted_hps": 1762745
+    },
+    "blake3_speedup": 0.6
+  }
+}

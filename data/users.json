@@ -1,0 +1,9 @@
+{
+  "unsalted_users": {},
+  "salted_users": {
+    "testuser": {
+      "hash": "2c24aef879a1a122edbb84574b4d4733cdb7f83b1f97291053a7b73cc9135738",
+      "salt": "0666936ec3c664153b344177b7f92ad6"
+    }
+  }
+}

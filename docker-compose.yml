@@ -1,0 +1,165 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║  Docker Compose - Brute-Force Defender                                ║
+# ║                                                                       ║
+# ║  Adım 4: Docker Mimarisi Analizi                                    ║
+# ║  Tersine Mühendislik Dersi - Vize Projesi                           ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+#
+# === DOCKER COMPOSE ANALİZİ ===
+#
+# Docker Compose, birden fazla konteyneri tek bir YAML dosyasıyla
+# tanımlayıp yönetmenizi sağlar.
+#
+# Bu dosyadaki servisler:
+#   1. web    → Flask API sunucusu (ana uygulama)
+#   2. demo   → CLI demo runner (tek seferlik)
+#   3. test   → Test runner
+#
+# Konteyner Güvenliği:
+#   - read_only: true → Dosya sistemi salt-okunur
+#   - security_opt: no-new-privileges → Yetki yükseltme engeli
+#   - mem_limit → Bellek sınırlandırma (DoS koruması)
+#   - pids_limit → Süreç sayısı sınırlandırma (fork bomb koruması)
+
+version: '3.8'
+
+services:
+  # ================================================================== #
+  #  SERVİS 1: Web API (Flask)
+  # ================================================================== #
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production          # Multi-stage build'in production aşaması
+    image: brute-force-defender:latest
+    container_name: bfd-web
+    restart: unless-stopped       # Çökerse otomatik yeniden başlat
+
+    # Port Mapping: host:container
+    ports:
+      - "5000:5000"
+
+    # Ortam değişkenleri
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-default_dev_key_change_in_production}
+      - SALT_LENGTH=16
+      - MAX_LOGIN_ATTEMPTS=5
+
+    # Volume Mount'lar
+    volumes:
+      - app-results:/app/results  # Sonuçlar kalıcı volume'da saklanır
+      - app-logs:/app/logs        # Loglar kalıcı volume'da saklanır
+
+    # ============================================================ #
+    #  GÜVENLİK AYARLARI
+    # ============================================================ #
+    security_opt:
+      - no-new-privileges:true    # Yetki yükseltme (privilege escalation) engeli
+    read_only: false              # Web uygulaması yazma gerektirir
+    tmpfs:
+      - /tmp                      # Geçici dosyalar RAM'de (güvenlik)
+
+    # Kaynak Sınırları (DoS Koruması)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'             # Maksimum 1 CPU core
+          memory: 512M            # Maksimum 512MB RAM
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # Sağlık kontrolü
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Ağ
+    networks:
+      - bfd-network
+
+  # ================================================================== #
+  #  SERVİS 2: Demo Runner (Tek Seferlik)
+  # ================================================================== #
+  demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: bfd-demo
+    command: ["main.py"]          # CMD override: demo çalıştır
+
+    # Güvenlik: Sadece okuma
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+    # Sonuçları dışarı yaz
+    volumes:
+      - app-results:/app/results
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'             # Demo benchmark için 2 CPU
+          memory: 1G
+
+    networks:
+      - bfd-network
+
+    # Bu servis bir kez çalışır ve durur
+    profiles:
+      - demo
+
+  # ================================================================== #
+  #  SERVİS 3: Test Runner
+  # ================================================================== #
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: bfd-test
+    command: ["-m", "pytest", "tests/", "-v", "--tb=short"]
+
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+
+    networks:
+      - bfd-network
+
+    profiles:
+      - test
+
+# ====================================================================== #
+#  VOLUME'LAR (Kalıcı Veri)
+# ====================================================================== #
+volumes:
+  app-results:
+    driver: local
+    name: bfd-results
+  app-logs:
+    driver: local
+    name: bfd-logs
+
+# ====================================================================== #
+#  AĞLAR
+# ====================================================================== #
+networks:
+  bfd-network:
+    driver: bridge
+    name: bfd-network
+    # İzolasyon: Sadece bu projenin konteynerleri birbirleriyle iletişim kurabilir

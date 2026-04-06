@@ -194,3 +194,5 @@ Bu proje eğitim amaçlıdır. Tersine Mühendislik dersi vize projesi kapsamın
 ## Etik Uyarı
 
 Bu proje yalnızca eğitim ve akademik amaçlarla geliştirilmiştir. Brute-force saldırıları izinsiz sistemlere karşı kullanmak yasadışıdır. Tüm simülasyonlar yerel ortamda ve sahte verilerle gerçekleştirilmiştir.
+<img width="28" height="28" alt="download" src="https://github.com/user-attachments/assets/f1433eee-5c4d-458d-b7cd-b1a26e1c9d3b" />
+

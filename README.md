@@ -16,6 +16,10 @@
 
 Bu proje, BLAKE3 kullanarak salt'siz ve salt'li sifre saklama yaklasimlarini karsilastirir. Amac, rainbow table, dictionary attack ve brute-force senaryolarinda salting kullaniminin neden kritik oldugunu kod, test, CLI demo, Flask API, Docker ve CI/CD ile birlikte gostermektir.
 
+## 🎬 Demo
+
+![Project Demo Video](./demo/project-demo.webp)
+
 ## Ozet
 
 - `main.py`: CLI tabanli demo ve benchmark akisi

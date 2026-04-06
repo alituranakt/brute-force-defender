@@ -70,6 +70,7 @@ from collections import defaultdict
 
 # Flask ve JWT
 from flask import Flask, request, jsonify, g
+from dotenv import load_dotenv
 
 # Proje modülleri
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -82,6 +83,7 @@ from src.benchmark import PerformanceBenchmark
 #  UYGULAMA KONFİGÜRASYONU
 # ====================================================================== #
 
+load_dotenv()
 app = Flask(__name__)
 
 # Konfigürasyon (.env veya ortam değişkenlerinden)

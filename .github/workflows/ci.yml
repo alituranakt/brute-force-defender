@@ -57,7 +57,7 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8 src tests app.py main.py --max-line-length=120 --statistics
+          flake8 src tests app.py main.py --statistics
 
   docker:
     runs-on: ubuntu-latest

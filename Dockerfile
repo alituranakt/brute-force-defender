@@ -125,5 +125,4 @@ EXPOSE 5000
 #   docker run brute-force-defender python main.py → Demo çalıştırır
 #   docker run brute-force-defender pytest tests/  → Testleri çalıştırır
 
-ENTRYPOINT ["python"]
-CMD ["app.py"]
+CMD ["python", "app.py"]

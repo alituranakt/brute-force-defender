@@ -1,163 +1,44 @@
-# ╔═══════════════════════════════════════════════════════════════════════╗
-# ║  CI/CD Pipeline - Brute-Force Defender                                ║
-# ║                                                                       ║
-# ║  Adım 3 Analizi: GitHub Actions CI/CD Pipeline                       ║
-# ║  Tersine Mühendislik Dersi - Vize Projesi                           ║
-# ╚═══════════════════════════════════════════════════════════════════════╝
-#
-# === CI/CD PIPELINE ANALİZİ ===
-#
-# Bu workflow aşağıdaki durumlarda TETİKLENİR (trigger):
-#   1. "main" branch'ine push yapıldığında
-#   2. "main" branch'ine pull request açıldığında
-#   3. Elle tetiklendiğinde (workflow_dispatch)
-#
-# WEBHOOK AÇIKLAMASI:
-#   GitHub Webhook, bir repo'da belirli bir olay gerçekleştiğinde
-#   (push, PR, issue vb.) GitHub'ın belirlenen URL'ye HTTP POST
-#   isteği göndermesidir. CI/CD bağlamında:
-#   - Geliştirici kod push eder → GitHub webhook tetiklenir
-#   - Webhook, GitHub Actions runner'ına "yeni iş var" sinyali gönderir
-#   - Runner pipeline'ı başlatır (checkout, test, build, deploy)
-#   - Sonuç GitHub'a geri bildirilir (check status)
-#
-# PIPELINE ADIMLARI:
-#   Job 1: lint        → Kod kalite kontrolü (flake8)
-#   Job 2: test        → Birim testleri (pytest, 3 Python sürümünde)
-#   Job 3: security    → Güvenlik taraması (bandit, safety)
-#   Job 4: docker      → Docker imaj build ve test
-#   Job 5: deploy      → (Sadece main branch) Deploy simülasyonu
+name: CI
 
-name: CI/CD Pipeline - Brute Force Defender
-
-# ====================================================================== #
-#  TETIKLEME KURALLARI (Triggers)
-# ====================================================================== #
 on:
-  # Push olayında tetiklenir
   push:
-    branches: [ main, develop ]
-    paths-ignore:
-      - '**.md'          # Markdown değişiklikleri CI tetiklemez
-      - 'docs/**'        # Dokümantasyon değişiklikleri CI tetiklemez
-
-  # Pull Request olayında tetiklenir
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [ main ]
-    types: [ opened, synchronize, reopened ]
-
-  # Manuel tetikleme (GitHub UI'dan "Run workflow" butonu)
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      run_security_scan:
-        description: 'Güvenlik taraması çalıştır'
-        required: false
-        default: 'true'
-        type: boolean
 
-# ====================================================================== #
-#  ORTAM DEĞİŞKENLERİ
-# ====================================================================== #
-env:
-  PYTHON_DEFAULT_VERSION: '3.10'
-  DOCKER_IMAGE_NAME: brute-force-defender
-
-# ====================================================================== #
-#  JOB 1: KOD KALİTE KONTROLÜ (Linting)
-# ====================================================================== #
 jobs:
-  lint:
-    name: "Kod Kalite Kontrolü (Lint)"
+  test:
     runs-on: ubuntu-latest
-    # Bu job her zaman çalışır (push ve PR'da)
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.10", "3.12"]
 
     steps:
-      # 1. Repo'yu checkout et (kodu indir)
-      # Bu adım, runner makinesine Git repo'sunu klonlar
       - name: Checkout repository
         uses: actions/checkout@v4
-        # actions/checkout, GitHub'ın resmi checkout action'ıdır
-        # v4: En son kararlı sürüm
-        # Varsayılan: Sadece son commit'i çeker (shallow clone)
 
-      # 2. Python ortamını kur
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
-          cache: 'pip'  # pip bağımlılıklarını cache'le (hızlanma)
-
-      # 3. Lint araçlarını kur
-      - name: Install lint dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 flake8-docstrings
-
-      # 4. flake8 ile kod kalitesi kontrolü
-      - name: Run flake8
-        run: |
-          # Söz dizimi hataları ve tanımsız isimler (kritik hatalar)
-          flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Stil uyarıları (bilgilendirme)
-          flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
-
-  # ====================================================================== #
-  #  JOB 2: BİRİM TESTLERİ (Test Matrix)
-  # ====================================================================== #
-  test:
-    name: "Testler (Python ${{ matrix.python-version }})"
-    runs-on: ubuntu-latest
-    needs: lint  # lint başarılı olduktan SONRA çalışır (dependency)
-
-    # Test Matrix: Birden fazla Python sürümünde paralel test
-    strategy:
-      matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-      fail-fast: false  # Bir sürüm başarısız olursa diğerleri devam eder
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov
 
-      # Birim testlerini çalıştır + coverage raporu
-      - name: Run tests with coverage
+      - name: Run unit tests
         run: |
-          python -m pytest tests/ -v \
-            --cov=src \
-            --cov-report=term-missing \
-            --cov-report=xml:coverage.xml \
-            --tb=short
+          python -m pytest tests/ -v --cov=src --cov-report=term-missing --tb=short
 
-      # Coverage raporunu artifact olarak kaydet
-      - name: Upload coverage report
-        if: matrix.python-version == '3.10'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.xml
-          retention-days: 30
-
-  # ====================================================================== #
-  #  JOB 3: GÜVENLİK TARAMASI
-  # ====================================================================== #
-  security:
-    name: "Güvenlik Taraması"
+  lint:
     runs-on: ubuntu-latest
-    needs: lint
-    # Manuel tetiklemede devre dışı bırakılabilir
-    if: ${{ github.event.inputs.run_security_scan != 'false' }}
 
     steps:
       - name: Checkout repository
@@ -166,112 +47,28 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_DEFAULT_VERSION }}
+          python-version: "3.10"
+          cache: pip
 
-      - name: Install security tools
+      - name: Install lint dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install bandit safety
-          pip install -r requirements.txt
+          pip install flake8
 
-      # Bandit: Python kaynak kod güvenlik analizi
-      # Yaygın güvenlik açıklarını (SQL injection, XSS, hardcoded passwords vb.) tarar
-      - name: Run Bandit security scan
+      - name: Run flake8
         run: |
-          bandit -r src/ -f json -o bandit-report.json --exit-zero
-          bandit -r src/ -f screen --exit-zero
-        continue-on-error: true
+          flake8 src tests app.py main.py --max-line-length=120 --statistics
 
-      # Safety: Bilinen güvenlik açığı olan paketleri kontrol eder
-      - name: Check dependency vulnerabilities
-        run: |
-          safety check --full-report || true
-        continue-on-error: true
-
-      - name: Upload security reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-reports
-          path: |
-            bandit-report.json
-          retention-days: 30
-
-  # ====================================================================== #
-  #  JOB 4: DOCKER BUILD VE TEST
-  # ====================================================================== #
   docker:
-    name: "Docker Build & Test"
     runs-on: ubuntu-latest
-    needs: test  # Testler geçtikten SONRA çalışır
+    needs: test
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Docker Buildx: Gelişmiş Docker build özellikleri
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Build image
+        run: docker build -t brute-force-defender:test .
 
-      # Docker imajını build et
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ env.DOCKER_IMAGE_NAME }}:test .
-          docker images | grep ${{ env.DOCKER_IMAGE_NAME }}
-
-      # Konteynerde testleri çalıştır
-      - name: Run tests in container
-        run: |
-          docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:test \
-            python -m pytest tests/ -v --tb=short
-
-      # Konteynerde demo'yu çalıştır
-      - name: Run demo in container
-        run: |
-          docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:test \
-            python main.py --demo 1
-
-      # Docker imaj boyutunu kontrol et
-      - name: Check image size
-        run: |
-          IMAGE_SIZE=$(docker image inspect ${{ env.DOCKER_IMAGE_NAME }}:test --format='{{.Size}}')
-          IMAGE_SIZE_MB=$((IMAGE_SIZE / 1024 / 1024))
-          echo "Docker imaj boyutu: ${IMAGE_SIZE_MB}MB"
-          if [ "${IMAGE_SIZE_MB}" -gt 500 ]; then
-            echo "::warning::Docker imajı 500MB'dan büyük (${IMAGE_SIZE_MB}MB)!"
-          fi
-
-  # ====================================================================== #
-  #  JOB 5: DEPLOY (Sadece main branch)
-  # ====================================================================== #
-  deploy:
-    name: "Deploy (Simülasyon)"
-    runs-on: ubuntu-latest
-    needs: [ test, security, docker ]  # Tüm kontroller geçtikten sonra
-
-    # SADECE main branch'ine push'ta çalışır (PR'larda çalışmaz)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    environment:
-      name: production
-      url: https://github.com/${{ github.repository }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Deploy notification
-        run: |
-          echo "═══════════════════════════════════════════════"
-          echo "  DEPLOY BAŞARILI (Simülasyon)"
-          echo "═══════════════════════════════════════════════"
-          echo "  Branch: ${{ github.ref_name }}"
-          echo "  Commit: ${{ github.sha }}"
-          echo "  Tetikleyen: ${{ github.actor }}"
-          echo "  Tarih: $(date)"
-          echo "═══════════════════════════════════════════════"
-
-      # Gerçek deploy senaryosunda buraya şunlar eklenebilir:
-      # - Docker Hub'a push
-      # - Kubernetes'e deploy
-      # - AWS/GCP/Azure'a deploy
-      # - Slack/Discord bildirim gönderme
+      - name: Run smoke test in container
+        run: docker run --rm brute-force-defender:test python -m pytest tests/ -q

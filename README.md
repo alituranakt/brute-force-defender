@@ -18,7 +18,7 @@ Bu proje, BLAKE3 kullanarak salt'siz ve salt'li sifre saklama yaklasimlarini kar
 
 ## 🎬 Demo
 
-![Project Demo Video](./demo/project-demo.webp)
+![Project Demo Video](./demo/DEF (2).mp4)
 
 ## Ozet
 
